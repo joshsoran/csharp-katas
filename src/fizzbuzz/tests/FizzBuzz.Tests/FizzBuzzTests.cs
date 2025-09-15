@@ -16,6 +16,7 @@ public class FizzBuzzTests
     [InlineData(3, "Fizz")]
     [InlineData(5, "Buzz")]
     [InlineData(15, "FizzBuzz")]
+    [InlineData(16, "16")]
     public void FizzBuzz_Works(int n, string expected)
     {
         Assert.Equal(expected, FizzBuzz.Of(n));
