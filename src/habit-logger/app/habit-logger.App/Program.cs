@@ -1,23 +1,38 @@
 ﻿/* TODO:
-This is an application where you’ll log occurrences of a habit.
-[ ] This habit can't be tracked by time (ex. hours of sleep), only by quantity (ex. number of water glasses a day)
-[ ] Users need to be able to input the date of the occurrence of the habit
-[ ] The application should store and retrieve data from a real database
-[ ] When the application starts, it should create a sqlite database, if one isn’t present.
-[ ] It should also create a table in the database, where the habit will be logged.
-[ ] The users should be able to insert, delete, update and view their logged habit.
-[ ] You should handle all possible errors so that the application never crashes.
-[ ] You can only interact with the database using ADO.NET. You can’t use mappers such as Entity Framework or Dapper.
-[ ] Follow the DRY Principle, and avoid code repetition.
-[ ] Your project needs to contain a Read Me file where you'll explain how your app works. Here's a nice example:
-*/
+   This is an application where you’ll log occurrences of a habit.
+   [ ] This habit can't be tracked by time (ex. hours of sleep), only by quantity (ex. number of water glasses a day)
+   [ ] Users need to be able to input the date of the occurrence of the habit
+   [*] The application should store and retrieve data from a real database
+   [*] When the application starts, it should create a sqlite database, if one isn’t present.
+   [*] It should also create a table in the database, where the habit will be logged.
+   [ ] The users should be able to insert, delete, update and view their logged habit.
+   [ ] You should handle all possible errors so that the application never crashes.
+   [*] You can only interact with the database using ADO.NET. You can’t use mappers such as Entity Framework or Dapper.
+   [ ] Follow the DRY Principle, and avoid code repetition.
+   [ ] Your project needs to contain a Read Me file where you'll explain how your app works. Here's a nice example:
+   */
 
+// Potential BUG --> Careful with datetime input
 using System;
 using System.Data.SQLite;
 using System.IO;
 
 class Program
 {
+    // return either console error or number
+    static int UserInput()
+    {
+        int output;
+        string inp = Console.ReadLine();
+
+        if (!int.TryParse(inp, out output))
+        {
+            Console.WriteLine($"Invalid input: {inp}!");
+            return -1;
+        }
+        return output;
+    }
+
     static void Main(string[] args)
     {
         string dbFile = "habits.db";
@@ -30,6 +45,7 @@ class Program
             Console.WriteLine("Database created.");
         }
 
+        // open connection
         using (var connection = new SQLiteConnection(connectionString))
         {
             connection.Open();
@@ -37,11 +53,11 @@ class Program
             // 1. CREATE TABLE
             string createTableQuery = @"
                 CREATE TABLE IF NOT EXISTS Habits (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,
-                    Frequency TEXT NOT NULL,
-                    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-                );";
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Name TEXT NOT NULL,
+                        Amount TEXT NOT NULL,
+                        Date DATETIME DEFAULT CURRENT_TIMESTAMP 
+                        );";
 
             using (var command = new SQLiteCommand(createTableQuery, connection))
             {
@@ -49,71 +65,114 @@ class Program
                 Console.WriteLine("Table ensured.");
             }
 
-            // 2. INSERT (C in CRUD)
-            string insertQuery = "INSERT INTO Habits (Name, Frequency) VALUES (@name, @frequency)";
-            using (var insertCommand = new SQLiteCommand(insertQuery, connection))
+            // Begin loop
+            bool running = true;
+            while(running)
             {
-                insertCommand.Parameters.AddWithValue("@name", "Meditation");
-                insertCommand.Parameters.AddWithValue("@frequency", "Daily");
-                insertCommand.ExecuteNonQuery();
-                Console.WriteLine("Inserted habit: Meditation.");
-            }
+                Console.WriteLine("1. New Habit\n2. Update Habit\n3. Delete Habit\n4. List Habit\n5. QUIT");
 
-            // 3. READ (R in CRUD)
-            string selectQuery = "SELECT Id, Name, Frequency, CreatedAt FROM Habits";
-            using (var selectCommand = new SQLiteCommand(selectQuery, connection))
-            using (var reader = selectCommand.ExecuteReader())
-            {
-                Console.WriteLine("\n-- Current Habits --");
-                while (reader.Read())
+                // Check for valid input
+                int opt = UserInput();
+                if (opt < 1 || opt > 5)
                 {
-                    int id = reader.GetInt32(0);
-                    string name = reader.GetString(1);
-                    string frequency = reader.GetString(2);
-                    string createdAt = reader.GetDateTime(3).ToString();
-
-                    Console.WriteLine($"{id}: {name} ({frequency}), created at {createdAt}");
+                    Console.WriteLine("Invalid input, please try again.");
+                    continue;
                 }
-            }
 
-            // 4. UPDATE (U in CRUD)
-            string updateQuery = "UPDATE Habits SET Frequency = @frequency WHERE Name = @name";
-            using (var updateCommand = new SQLiteCommand(updateQuery, connection))
-            {
-                updateCommand.Parameters.AddWithValue("@frequency", "Weekly");
-                updateCommand.Parameters.AddWithValue("@name", "Meditation");
-                int rowsAffected = updateCommand.ExecuteNonQuery();
-                Console.WriteLine($"\nUpdated rows: {rowsAffected}");
-            }
-
-            // Verify update
-            using (var verifyCommand = new SQLiteCommand(selectQuery, connection))
-            using (var reader = verifyCommand.ExecuteReader())
-            {
-                Console.WriteLine("\n-- Habits After Update --");
-                while (reader.Read())
+                // Switch statement for options
+                switch (opt)
                 {
-                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Frequency"]})");
-                }
-            }
+                    case 1:
+                        // INSERT 
+                        // User input
+                        Console.WriteLine("------------------");
+                        Console.WriteLine("Habit Name: ");
+                        string habitName = Console.ReadLine();
+                        Console.WriteLine("Habit Initial Amount: ");
+                        string habitAmount = Console.ReadLine();
+                        Console.WriteLine("Habit Date Started (type 't' for today): ");
+                        string habitDate = Console.ReadLine();
 
-            // 5. DELETE (D in CRUD)
-            string deleteQuery = "DELETE FROM Habits WHERE Name = @name";
-            using (var deleteCommand = new SQLiteCommand(deleteQuery, connection))
-            {
-                deleteCommand.Parameters.AddWithValue("@name", "Meditation");
-                int rowsDeleted = deleteCommand.ExecuteNonQuery();
-                Console.WriteLine($"\nDeleted rows: {rowsDeleted}");
-            }
+                        // Inserting into table
+                        string insertQuery = "INSERT INTO Habits (Name, Amount, Date) VALUES (@name, @amount, @date)";
+                        using (var insertCommand = new SQLiteCommand(insertQuery, connection))
+                        {
+                            insertCommand.Parameters.AddWithValue("@name", habitName);
+                            insertCommand.Parameters.AddWithValue("@amount", habitAmount);
+                            insertCommand.Parameters.AddWithValue("@date", habitDate);
+                            insertCommand.ExecuteNonQuery();
+                            Console.WriteLine("Inserted habit: Meditation.");
+                        }
+                        break;
 
-            // Verify delete
-            using (var verifyCommand = new SQLiteCommand(selectQuery, connection))
-            using (var reader = verifyCommand.ExecuteReader())
-            {
-                Console.WriteLine("\n-- Habits After Delete --");
-                while (reader.Read())
-                {
-                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Frequency"]})");
+                    case 2:
+                        // UPDATE 
+                        string updateQuery = "UPDATE Habits SET Frequency = @frequency WHERE Name = @name";
+                        using (var updateCommand = new SQLiteCommand(updateQuery, connection))
+                        {
+                            updateCommand.Parameters.AddWithValue("@frequency", "Weekly");
+                            updateCommand.Parameters.AddWithValue("@name", "Meditation");
+                            int rowsAffected = updateCommand.ExecuteNonQuery();
+                            Console.WriteLine($"\nUpdated rows: {rowsAffected}");
+                        }
+
+                        // Verify update
+                        using (var verifyCommand = new SQLiteCommand(selectQuery, connection))
+                            using (var reader = verifyCommand.ExecuteReader())
+                            {
+                                Console.WriteLine("\n-- Habits After Update --");
+                                while (reader.Read())
+                                {
+                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Frequency"]})");
+                                }
+                            }
+                        break;
+
+                    case 3:
+                        // DELETE 
+                        string deleteQuery = "DELETE FROM Habits WHERE Name = @name";
+                        using (var deleteCommand = new SQLiteCommand(deleteQuery, connection))
+                        {
+                            deleteCommand.Parameters.AddWithValue("@name", "Meditation");
+                            int rowsDeleted = deleteCommand.ExecuteNonQuery();
+                            Console.WriteLine($"\nDeleted rows: {rowsDeleted}");
+                        }
+
+                        // Verify delete
+                        using (var verifyCommand = new SQLiteCommand(selectQuery, connection))
+                            using (var reader = verifyCommand.ExecuteReader())
+                            {
+                                Console.WriteLine("\n-- Habits After Delete --");
+                                while (reader.Read())
+                                {
+                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Frequency"]})");
+                                }
+                            }
+                        break;
+
+                    case 4:
+                        // READ 
+                        string selectQuery = "SELECT Id, Name, Frequency, CreatedAt FROM Habits";
+                        using (var selectCommand = new SQLiteCommand(selectQuery, connection))
+                            using (var reader = selectCommand.ExecuteReader())
+                            {
+                                Console.WriteLine("\n-- Current Habits --");
+                                while (reader.Read())
+                                {
+                                    int id = reader.GetInt32(0);
+                                    string name = reader.GetString(1);
+                                    string frequency = reader.GetString(2);
+                                    string createdAt = reader.GetDateTime(3).ToString();
+
+                                    Console.WriteLine($"{id}: {name} ({frequency}), created at {createdAt}");
+                                }
+                            }
+                        break;
+
+                        // QUIT program 
+                    case 5:
+                        return;
+                        break;
                 }
             }
         }
