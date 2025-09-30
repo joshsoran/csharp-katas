@@ -78,6 +78,13 @@ class Program
                     Console.WriteLine("Invalid input, please try again.");
                     continue;
                 }
+                
+                // Define variables to track lists
+                int idInp = 0;
+                int idTrack = 0;
+                List<string> currentHabitsList = new List<string>();
+                string selectQuery;
+                string nameUpdate;
 
                 // Switch statement for options
                 switch (opt)
@@ -107,11 +114,48 @@ class Program
 
                     case 2:
                         // UPDATE 
-                        string updateQuery = "UPDATE Habits SET Frequency = @frequency WHERE Name = @name";
+                        // First, LIST OUT CURRENT HABITS
+                        idTrack = 0;
+                        currentHabitsList = new List<string>();
+
+                        selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
+                        using (var selectCommand = new SQLiteCommand(selectQuery, connection))
+                            using (var reader = selectCommand.ExecuteReader())
+                            {
+                                Console.WriteLine("\n-- Current Habits --");
+                                while (reader.Read())
+                                {
+                                    // track list
+                                    idTrack++;
+
+                                    int id = reader.GetInt32(0);
+                                    string name = reader.GetString(1);
+                                    string amount = reader.GetString(2);
+                                    string date = reader.GetDateTime(3).ToString();
+
+                                    Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
+                                    currentHabitsList.Add(name);
+                                }
+                            }
+                        // Ask which ID
+                        Console.WriteLine("");
+                        Console.WriteLine("Which ID would you like to update?");
+                        idInp = UserInput();
+                        if (idTrack == 0 || idInp < 1 || idInp > idTrack)
+                        {
+                            Console.WriteLine("Invalid option!");
+                            continue;
+                        }
+                        nameUpdate = currentHabitsList[idInp-1];
+
+                        Console.WriteLine("New Amount value:");
+                        string amountUpdate = Console.ReadLine();
+
+                        string updateQuery = "UPDATE Habits SET Amount = @amount WHERE Name = @name";
                         using (var updateCommand = new SQLiteCommand(updateQuery, connection))
                         {
-                            updateCommand.Parameters.AddWithValue("@frequency", "Weekly");
-                            updateCommand.Parameters.AddWithValue("@name", "Meditation");
+                            updateCommand.Parameters.AddWithValue("@amount", "amount");
+                            updateCommand.Parameters.AddWithValue("@name", nameUpdate);
                             int rowsAffected = updateCommand.ExecuteNonQuery();
                             Console.WriteLine($"\nUpdated rows: {rowsAffected}");
                         }
@@ -123,17 +167,51 @@ class Program
                                 Console.WriteLine("\n-- Habits After Update --");
                                 while (reader.Read())
                                 {
-                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Frequency"]})");
+                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Amount"]})");
                                 }
                             }
                         break;
 
                     case 3:
+                        // First, LIST OUT CURRENT HABITS
+                        idTrack = 0;
+                        currentHabitsList = new List<string>();
+
+                        selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
+                        using (var selectCommand = new SQLiteCommand(selectQuery, connection))
+                            using (var reader = selectCommand.ExecuteReader())
+                            {
+                                Console.WriteLine("\n-- Current Habits --");
+                                while (reader.Read())
+                                {
+                                    // track list
+                                    idTrack++;
+
+                                    int id = reader.GetInt32(0);
+                                    string name = reader.GetString(1);
+                                    string amount = reader.GetString(2);
+                                    string date = reader.GetDateTime(3).ToString();
+
+                                    Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
+                                    currentHabitsList.Add(name);
+                                }
+                            }
+                        // Ask which ID
+                        Console.WriteLine("");
+                        Console.WriteLine("Which ID would you like to delete?");
+                        idInp = UserInput();
+                        if (idTrack == 0 || idInp < 1 || idInp > idTrack)
+                        {
+                            Console.WriteLine("Invalid option!");
+                            continue;
+                        }
+                        nameUpdate = currentHabitsList[idInp-1];
+
                         // DELETE 
                         string deleteQuery = "DELETE FROM Habits WHERE Name = @name";
                         using (var deleteCommand = new SQLiteCommand(deleteQuery, connection))
                         {
-                            deleteCommand.Parameters.AddWithValue("@name", "Meditation");
+                            deleteCommand.Parameters.AddWithValue("@name", "nameUpdate");
                             int rowsDeleted = deleteCommand.ExecuteNonQuery();
                             Console.WriteLine($"\nDeleted rows: {rowsDeleted}");
                         }
@@ -145,14 +223,14 @@ class Program
                                 Console.WriteLine("\n-- Habits After Delete --");
                                 while (reader.Read())
                                 {
-                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Frequency"]})");
+                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Amount"]})");
                                 }
                             }
                         break;
 
                     case 4:
                         // READ 
-                        string selectQuery = "SELECT Id, Name, Frequency, CreatedAt FROM Habits";
+                        selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
                         using (var selectCommand = new SQLiteCommand(selectQuery, connection))
                             using (var reader = selectCommand.ExecuteReader())
                             {
@@ -161,10 +239,10 @@ class Program
                                 {
                                     int id = reader.GetInt32(0);
                                     string name = reader.GetString(1);
-                                    string frequency = reader.GetString(2);
-                                    string createdAt = reader.GetDateTime(3).ToString();
+                                    string amount = reader.GetString(2);
+                                    string date = reader.GetDateTime(3).ToString();
 
-                                    Console.WriteLine($"{id}: {name} ({frequency}), created at {createdAt}");
+                                    Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
                                 }
                             }
                         break;
