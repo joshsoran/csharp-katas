@@ -14,8 +14,9 @@
 
 // Potential BUG --> Careful with datetime input
 using System;
-using System.Data.SQLite;
+//using System.Data.SQLite;
 using System.IO;
+using Microsoft.Data.Sqlite;
 
 class Program
 {
@@ -23,7 +24,7 @@ class Program
     static int UserInput()
     {
         int output;
-        string inp = Console.ReadLine();
+        string? inp = Console.ReadLine();
 
         if (!int.TryParse(inp, out output))
         {
@@ -36,17 +37,10 @@ class Program
     static void Main(string[] args)
     {
         string dbFile = "habits.db";
-        string connectionString = $"Data Source={dbFile};Version=3;";
-
-        // Ensure DB file exists
-        if (!File.Exists(dbFile))
-        {
-            SQLiteConnection.CreateFile(dbFile);
-            Console.WriteLine("Database created.");
-        }
+        string connectionString = $"Data Source={dbFile};";
 
         // open connection
-        using (var connection = new SQLiteConnection(connectionString))
+        using (var connection = new SqliteConnection(connectionString))
         {
             connection.Open();
 
@@ -59,7 +53,7 @@ class Program
                         Date DATETIME DEFAULT CURRENT_TIMESTAMP 
                         );";
 
-            using (var command = new SQLiteCommand(createTableQuery, connection))
+            using (var command = new SqliteCommand(createTableQuery, connection))
             {
                 command.ExecuteNonQuery();
                 Console.WriteLine("Table ensured.");
@@ -72,7 +66,7 @@ class Program
                 Console.WriteLine("1. New Habit\n2. Update Habit\n3. Delete Habit\n4. List Habit\n5. QUIT");
 
                 // Check for valid input
-                int opt = UserInput();
+                int? opt = UserInput();
                 if (opt < 1 || opt > 5)
                 {
                     Console.WriteLine("Invalid input, please try again.");
@@ -94,15 +88,15 @@ class Program
                         // User input
                         Console.WriteLine("------------------");
                         Console.WriteLine("Habit Name: ");
-                        string habitName = Console.ReadLine();
+                        string? habitName = Console.ReadLine();
                         Console.WriteLine("Habit Initial Amount: ");
-                        string habitAmount = Console.ReadLine();
+                        string? habitAmount = Console.ReadLine();
                         Console.WriteLine("Habit Date Started (type 't' for today): ");
-                        string habitDate = Console.ReadLine();
+                        string? habitDate = Console.ReadLine();
 
                         // Inserting into table
                         string insertQuery = "INSERT INTO Habits (Name, Amount, Date) VALUES (@name, @amount, @date)";
-                        using (var insertCommand = new SQLiteCommand(insertQuery, connection))
+                        using (var insertCommand = new SqliteCommand(insertQuery, connection))
                         {
                             insertCommand.Parameters.AddWithValue("@name", habitName);
                             insertCommand.Parameters.AddWithValue("@amount", habitAmount);
@@ -119,7 +113,7 @@ class Program
                         currentHabitsList = new List<string>();
 
                         selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
-                        using (var selectCommand = new SQLiteCommand(selectQuery, connection))
+                        using (var selectCommand = new SqliteCommand(selectQuery, connection))
                             using (var reader = selectCommand.ExecuteReader())
                             {
                                 Console.WriteLine("\n-- Current Habits --");
@@ -149,10 +143,10 @@ class Program
                         nameUpdate = currentHabitsList[idInp-1];
 
                         Console.WriteLine("New Amount value:");
-                        string amountUpdate = Console.ReadLine();
+                        string? amountUpdate = Console.ReadLine();
 
                         string updateQuery = "UPDATE Habits SET Amount = @amount WHERE Name = @name";
-                        using (var updateCommand = new SQLiteCommand(updateQuery, connection))
+                        using (var updateCommand = new SqliteCommand(updateQuery, connection))
                         {
                             updateCommand.Parameters.AddWithValue("@amount", "amount");
                             updateCommand.Parameters.AddWithValue("@name", nameUpdate);
@@ -161,7 +155,7 @@ class Program
                         }
 
                         // Verify update
-                        using (var verifyCommand = new SQLiteCommand(selectQuery, connection))
+                        using (var verifyCommand = new SqliteCommand(selectQuery, connection))
                             using (var reader = verifyCommand.ExecuteReader())
                             {
                                 Console.WriteLine("\n-- Habits After Update --");
@@ -178,7 +172,7 @@ class Program
                         currentHabitsList = new List<string>();
 
                         selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
-                        using (var selectCommand = new SQLiteCommand(selectQuery, connection))
+                        using (var selectCommand = new SqliteCommand(selectQuery, connection))
                             using (var reader = selectCommand.ExecuteReader())
                             {
                                 Console.WriteLine("\n-- Current Habits --");
@@ -209,7 +203,7 @@ class Program
 
                         // DELETE 
                         string deleteQuery = "DELETE FROM Habits WHERE Name = @name";
-                        using (var deleteCommand = new SQLiteCommand(deleteQuery, connection))
+                        using (var deleteCommand = new SqliteCommand(deleteQuery, connection))
                         {
                             deleteCommand.Parameters.AddWithValue("@name", "nameUpdate");
                             int rowsDeleted = deleteCommand.ExecuteNonQuery();
@@ -217,7 +211,7 @@ class Program
                         }
 
                         // Verify delete
-                        using (var verifyCommand = new SQLiteCommand(selectQuery, connection))
+                        using (var verifyCommand = new SqliteCommand(selectQuery, connection))
                             using (var reader = verifyCommand.ExecuteReader())
                             {
                                 Console.WriteLine("\n-- Habits After Delete --");
@@ -231,7 +225,7 @@ class Program
                     case 4:
                         // READ 
                         selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
-                        using (var selectCommand = new SQLiteCommand(selectQuery, connection))
+                        using (var selectCommand = new SqliteCommand(selectQuery, connection))
                             using (var reader = selectCommand.ExecuteReader())
                             {
                                 Console.WriteLine("\n-- Current Habits --");
@@ -250,7 +244,6 @@ class Program
                         // QUIT program 
                     case 5:
                         return;
-                        break;
                 }
             }
         }
