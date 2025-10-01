@@ -91,8 +91,26 @@ class Program
                         string? habitName = Console.ReadLine();
                         Console.WriteLine("Habit Initial Amount: ");
                         string? habitAmount = Console.ReadLine();
-                        Console.WriteLine("Habit Date Started (type 't' for today): ");
+                        Console.WriteLine("Habit Date Started, type 't' for today (yyyy-mm-dd): ");
                         string? habitDate = Console.ReadLine();
+                        if (habitDate.ToLower() == "t")
+                        {
+                            string today = DateTime.Now.ToString("yyyy-MM-dd");
+                            habitDate = today; 
+                        }
+                        else if (DateTime.TryParseExact(habitDate, "yyyy-MM-dd",
+                                    System.Globalization.CultureInfo.InvariantCulture,
+                                    System.Globalization.DateTimeStyles.None,
+                                    out var habitDateParsed))
+                        {
+                            Console.WriteLine($"Parsed date: {habitDateParsed}");
+                            habitDate = habitDateParsed.ToString();
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid date format. Use yyyy-MM-dd.");
+                            continue;
+                        }
 
                         // Inserting into table
                         string insertQuery = "INSERT INTO Habits (Name, Amount, Date) VALUES (@name, @amount, @date)";
@@ -102,7 +120,7 @@ class Program
                             insertCommand.Parameters.AddWithValue("@amount", habitAmount);
                             insertCommand.Parameters.AddWithValue("@date", habitDate);
                             insertCommand.ExecuteNonQuery();
-                            Console.WriteLine("Inserted habit: Meditation.");
+                            Console.WriteLine($"Inserted habit: {habitName}; Amount: {habitAmount}; Date: {habitDate}");
                         }
                         break;
 
@@ -125,7 +143,7 @@ class Program
                                     int id = reader.GetInt32(0);
                                     string name = reader.GetString(1);
                                     string amount = reader.GetString(2);
-                                    string date = reader.GetDateTime(3).ToString();
+                                    string date = reader.GetString(3);
 
                                     Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
                                     currentHabitsList.Add(name);
@@ -184,7 +202,7 @@ class Program
                                     int id = reader.GetInt32(0);
                                     string name = reader.GetString(1);
                                     string amount = reader.GetString(2);
-                                    string date = reader.GetDateTime(3).ToString();
+                                    string date = reader.GetString(3);
 
                                     Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
                                     currentHabitsList.Add(name);
@@ -234,7 +252,7 @@ class Program
                                     int id = reader.GetInt32(0);
                                     string name = reader.GetString(1);
                                     string amount = reader.GetString(2);
-                                    string date = reader.GetDateTime(3).ToString();
+                                    string date = reader.GetString(3);
 
                                     Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
                                 }
