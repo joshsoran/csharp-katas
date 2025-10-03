@@ -1,20 +1,20 @@
 ﻿/* TODO:
    This is an application where you’ll log occurrences of a habit.
-   [ ] This habit can't be tracked by time (ex. hours of sleep), only by quantity (ex. number of water glasses a day)
-   [ ] Users need to be able to input the date of the occurrence of the habit
+   [*] This habit can't be tracked by time (ex. hours of sleep), only by quantity (ex. number of water glasses a day)
+   [*] Users need to be able to input the date of the occurrence of the habit
    [*] The application should store and retrieve data from a real database
    [*] When the application starts, it should create a sqlite database, if one isn’t present.
    [*] It should also create a table in the database, where the habit will be logged.
-   [ ] The users should be able to insert, delete, update and view their logged habit.
-   [ ] You should handle all possible errors so that the application never crashes.
+   [*] The users should be able to insert, delete, update and view their logged habit.
+   [*] You should handle all possible errors so that the application never crashes.
    [*] You can only interact with the database using ADO.NET. You can’t use mappers such as Entity Framework or Dapper.
    [ ] Follow the DRY Principle, and avoid code repetition.
    [ ] Your project needs to contain a Read Me file where you'll explain how your app works. Here's a nice example:
+   [ ] NO DUPLICATE ENTRIES!
    */
 
 // Potential BUG --> Careful with datetime input
 using System;
-//using System.Data.SQLite;
 using System.IO;
 using Microsoft.Data.Sqlite;
 
@@ -28,10 +28,66 @@ class Program
 
         if (!int.TryParse(inp, out output))
         {
-            Console.WriteLine($"Invalid input: {inp}!");
+            Console.WriteLine($"[ERROR]: Invalid input: {inp}!");
             return -1;
         }
         return output;
+    }
+    
+    // display list
+    static List<string> DisplayList(SqliteConnection connection)
+    {
+        // init list for return and row counter
+        List<string> currentIdList = new List<string>();
+        int idTrack = 0;
+
+        // Establish connection and display table from DB
+        string selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
+        using (var selectCommand = new SqliteCommand(selectQuery, connection))
+            using (var reader = selectCommand.ExecuteReader())
+            {
+                Console.WriteLine("\n----(Current Habits)----------------------------");
+                while (reader.Read())
+                {
+                    // track list
+                    idTrack++;
+
+                    // variable names
+                    int id = reader.GetInt32(0);
+                    string name = reader.GetString(1);
+                    string amount = reader.GetString(2);
+                    string date = reader.GetString(3);
+
+                    // Display
+                    Console.WriteLine($"{idTrack}: {name} ({amount}), created at {date}");
+
+                    // Add to list for return
+                    currentIdList.Add(id.ToString());
+                }
+            }
+        Console.WriteLine("------------------------------------------------\n");
+        return currentIdList;
+    }
+
+    // return ID selection from displayed list
+    static string ReturnId(SqliteConnection connection, string menuChoice)
+    {
+        string idDelete;
+        // Init list to display and receive
+        List<string> currentIdList = DisplayList(connection);
+
+        // Begin prompts
+        Console.WriteLine($"----({menuChoice})------------------------------------");
+        Console.WriteLine($"-> Which Id would you like to {menuChoice}?");
+        int idInp = UserInput();
+
+        // Filter bad options
+        if (idInp < 0 && idInp > currentIdList.Count)
+        {
+            Console.WriteLine("[ERROR]: Invalid option!");
+            return "ERROR";
+        }
+        return idDelete = currentIdList[idInp-1];
     }
 
     static void Main(string[] args)
@@ -56,7 +112,7 @@ class Program
             using (var command = new SqliteCommand(createTableQuery, connection))
             {
                 command.ExecuteNonQuery();
-                Console.WriteLine("Table ensured.");
+                Console.WriteLine("-> TABLE EXISTS!\n");
             }
 
             // Begin loop
@@ -69,31 +125,29 @@ class Program
                 int? opt = UserInput();
                 if (opt < 1 || opt > 5)
                 {
-                    Console.WriteLine("Invalid input, please try again.");
+                    Console.WriteLine("[ERROR]: Invalid input, please try again.");
                     continue;
                 }
                 
                 // Define variables to track lists
-                int idInp = 0;
-                int idTrack = 0;
                 List<string> currentHabitsList = new List<string>();
-                string selectQuery;
-                string nameUpdate;
 
                 // Switch statement for options
                 switch (opt)
                 {
                     case 1:
                         // INSERT 
+                        // Clear screen first
+                        Console.Clear();
                         // User input
-                        Console.WriteLine("------------------");
-                        Console.WriteLine("Habit Name: ");
+                        Console.WriteLine("------------------------------------------------");
+                        Console.WriteLine("-> Habit Name: ");
                         string? habitName = Console.ReadLine();
-                        Console.WriteLine("Habit Initial Amount: ");
+                        Console.WriteLine("-> Habit Initial Amount: ");
                         string? habitAmount = Console.ReadLine();
-                        Console.WriteLine("Habit Date Started, type 't' for today (yyyy-mm-dd): ");
+                        Console.WriteLine("-> Habit Date Started, type 't' for today (yyyy-mm-dd): ");
                         string? habitDate = Console.ReadLine();
-                        if (habitDate.ToLower() == "t")
+                        if (habitDate?.ToLower() == "t") // if habitDate is null, it won't equal to "t". This clears warnings.
                         {
                             string today = DateTime.Now.ToString("yyyy-MM-dd");
                             habitDate = today; 
@@ -103,12 +157,12 @@ class Program
                                     System.Globalization.DateTimeStyles.None,
                                     out var habitDateParsed))
                         {
-                            Console.WriteLine($"Parsed date: {habitDateParsed}");
-                            habitDate = habitDateParsed.ToString();
+                            habitDate = habitDateParsed.ToString("yyyy-MM-dd");
+                            Console.WriteLine($"-> Parsed date: {habitDate}");
                         }
                         else
                         {
-                            Console.WriteLine("Invalid date format. Use yyyy-MM-dd.");
+                            Console.WriteLine("[ERROR]: Invalid date format. Use yyyy-MM-dd.\n");
                             continue;
                         }
 
@@ -120,143 +174,65 @@ class Program
                             insertCommand.Parameters.AddWithValue("@amount", habitAmount);
                             insertCommand.Parameters.AddWithValue("@date", habitDate);
                             insertCommand.ExecuteNonQuery();
-                            Console.WriteLine($"Inserted habit: {habitName}; Amount: {habitAmount}; Date: {habitDate}");
+                            Console.WriteLine(
+                                    $"[SUCCESS!] Inserted habit: {habitName}; " + 
+                                    $"Amount: {habitAmount}; " + 
+                                    $"Date: {habitDate};\n"
+                                    );
                         }
                         break;
 
                     case 2:
                         // UPDATE 
-                        // First, LIST OUT CURRENT HABITS
-                        idTrack = 0;
-                        currentHabitsList = new List<string>();
+                        // Clear screen first
+                        Console.Clear();
+                        // Return existing list, grab ID
+                        string idUpdate = ReturnId(connection, "update");
 
-                        selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
-                        using (var selectCommand = new SqliteCommand(selectQuery, connection))
-                            using (var reader = selectCommand.ExecuteReader())
-                            {
-                                Console.WriteLine("\n-- Current Habits --");
-                                while (reader.Read())
-                                {
-                                    // track list
-                                    idTrack++;
-
-                                    int id = reader.GetInt32(0);
-                                    string name = reader.GetString(1);
-                                    string amount = reader.GetString(2);
-                                    string date = reader.GetString(3);
-
-                                    Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
-                                    currentHabitsList.Add(name);
-                                }
-                            }
-                        // Ask which ID
-                        Console.WriteLine("");
-                        Console.WriteLine("Which ID would you like to update?");
-                        idInp = UserInput();
-                        if (idTrack == 0 || idInp < 1 || idInp > idTrack)
-                        {
-                            Console.WriteLine("Invalid option!");
-                            continue;
-                        }
-                        nameUpdate = currentHabitsList[idInp-1];
-
-                        Console.WriteLine("New Amount value:");
+                        // Input new amount value
+                        Console.WriteLine("-> New Amount value:");
                         string? amountUpdate = Console.ReadLine();
 
-                        string updateQuery = "UPDATE Habits SET Amount = @amount WHERE Name = @name";
+                        // Update amount in table
+                        string updateQuery = "UPDATE Habits SET Amount = @amount WHERE Id = @Id";
                         using (var updateCommand = new SqliteCommand(updateQuery, connection))
                         {
-                            updateCommand.Parameters.AddWithValue("@amount", "amount");
-                            updateCommand.Parameters.AddWithValue("@name", nameUpdate);
+                            updateCommand.Parameters.AddWithValue("@amount", amountUpdate);
+                            updateCommand.Parameters.AddWithValue("@Id", idUpdate);
                             int rowsAffected = updateCommand.ExecuteNonQuery();
-                            Console.WriteLine($"\nUpdated rows: {rowsAffected}");
+                            Console.WriteLine($"\n-> Updated rows: {rowsAffected}");
                         }
 
                         // Verify update
-                        using (var verifyCommand = new SqliteCommand(selectQuery, connection))
-                            using (var reader = verifyCommand.ExecuteReader())
-                            {
-                                Console.WriteLine("\n-- Habits After Update --");
-                                while (reader.Read())
-                                {
-                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Amount"]})");
-                                }
-                            }
+                        DisplayList(connection);
                         break;
 
                     case 3:
-                        // First, LIST OUT CURRENT HABITS
-                        idTrack = 0;
-                        currentHabitsList = new List<string>();
+                        // DELETE
+                        // Clear screen first
+                        Console.Clear();
+                        // Return existing list, grab ID
+                        string idDelete = ReturnId(connection, "delete");
+                        if (idDelete == "ERROR") { continue; }
 
-                        selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
-                        using (var selectCommand = new SqliteCommand(selectQuery, connection))
-                            using (var reader = selectCommand.ExecuteReader())
-                            {
-                                Console.WriteLine("\n-- Current Habits --");
-                                while (reader.Read())
-                                {
-                                    // track list
-                                    idTrack++;
-
-                                    int id = reader.GetInt32(0);
-                                    string name = reader.GetString(1);
-                                    string amount = reader.GetString(2);
-                                    string date = reader.GetString(3);
-
-                                    Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
-                                    currentHabitsList.Add(name);
-                                }
-                            }
-                        // Ask which ID
-                        Console.WriteLine("");
-                        Console.WriteLine("Which ID would you like to delete?");
-                        idInp = UserInput();
-                        if (idTrack == 0 || idInp < 1 || idInp > idTrack)
-                        {
-                            Console.WriteLine("Invalid option!");
-                            continue;
-                        }
-                        nameUpdate = currentHabitsList[idInp-1];
-
-                        // DELETE 
-                        string deleteQuery = "DELETE FROM Habits WHERE Name = @name";
+                        // perform delete 
+                        string deleteQuery = "DELETE FROM Habits WHERE Id = @Id";
                         using (var deleteCommand = new SqliteCommand(deleteQuery, connection))
                         {
-                            deleteCommand.Parameters.AddWithValue("@name", "nameUpdate");
+                            deleteCommand.Parameters.AddWithValue("@Id", idDelete);
                             int rowsDeleted = deleteCommand.ExecuteNonQuery();
                             Console.WriteLine($"\nDeleted rows: {rowsDeleted}");
                         }
 
                         // Verify delete
-                        using (var verifyCommand = new SqliteCommand(selectQuery, connection))
-                            using (var reader = verifyCommand.ExecuteReader())
-                            {
-                                Console.WriteLine("\n-- Habits After Delete --");
-                                while (reader.Read())
-                                {
-                                    Console.WriteLine($"{reader["Id"]}: {reader["Name"]} ({reader["Amount"]})");
-                                }
-                            }
+                        DisplayList(connection);
                         break;
 
                     case 4:
                         // READ 
-                        selectQuery = "SELECT Id, Name, Amount, Date FROM Habits";
-                        using (var selectCommand = new SqliteCommand(selectQuery, connection))
-                            using (var reader = selectCommand.ExecuteReader())
-                            {
-                                Console.WriteLine("\n-- Current Habits --");
-                                while (reader.Read())
-                                {
-                                    int id = reader.GetInt32(0);
-                                    string name = reader.GetString(1);
-                                    string amount = reader.GetString(2);
-                                    string date = reader.GetString(3);
-
-                                    Console.WriteLine($"{id}: {name} ({amount}), created at {date}");
-                                }
-                            }
+                        // Clear screen first
+                        Console.Clear();
+                        DisplayList(connection);
                         break;
 
                         // QUIT program 
