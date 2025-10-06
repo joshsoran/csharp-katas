@@ -28,17 +28,19 @@ class Program
 
         if (!int.TryParse(inp, out output))
         {
-            Console.WriteLine($"[ERROR]: Invalid input: {inp}!");
+            Console.Clear();
+            Console.WriteLine($"[ERROR]: \"{inp}\" is not a number!\n");
             return -1;
         }
         return output;
     }
     
     // display list
-    static List<string> DisplayList(SqliteConnection connection)
+    static List<string> ReturnList(SqliteConnection connection, bool displayList)
     {
         // init list for return and row counter
         List<string> currentIdList = new List<string>();
+        List<string> currentNameList = new List<string>();
         int idTrack = 0;
 
         // Establish connection and display table from DB
@@ -46,7 +48,8 @@ class Program
         using (var selectCommand = new SqliteCommand(selectQuery, connection))
             using (var reader = selectCommand.ExecuteReader())
             {
-                Console.WriteLine("\n----(Current Habits)----------------------------");
+                if (displayList)
+                    Console.WriteLine("----(Current Habits)----------------------------");
                 while (reader.Read())
                 {
                     // track list
@@ -58,15 +61,28 @@ class Program
                     string amount = reader.GetString(2);
                     string date = reader.GetString(3);
 
-                    // Display
-                    Console.WriteLine($"{idTrack}: {name} ({amount}), created at {date}");
-
-                    // Add to list for return
-                    currentIdList.Add(id.ToString());
+                    if (displayList)
+                    {
+                        // Display
+                        Console.WriteLine($"({idTrack}) {name} ({amount}), created at {date}");
+                        // Add to list for return
+                        currentIdList.Add(id.ToString());
+                    }
+                    else  // Don't display & return names not IDs
+                    {   
+                        currentNameList.Add(name.ToString()); 
+                    }
                 }
             }
-        Console.WriteLine("------------------------------------------------\n");
-        return currentIdList;
+        if (displayList)
+        {
+            Console.WriteLine("------------------------------------------------\n");
+            return currentIdList;
+        }
+        else
+        {
+           return currentNameList;
+        } 
     }
 
     // return ID selection from displayed list
@@ -74,17 +90,25 @@ class Program
     {
         string idDelete;
         // Init list to display and receive
-        List<string> currentIdList = DisplayList(connection);
+        List<string> currentIdList = ReturnList(connection, true);
+
+        // Is list empty?
+        if (currentIdList.Count == 0)
+        {
+            Console.WriteLine("[ERROR]: List is Empty!");
+            return "ERROR";
+        }
 
         // Begin prompts
-        Console.WriteLine($"----({menuChoice})------------------------------------");
-        Console.WriteLine($"-> Which Id would you like to {menuChoice}?");
+        Console.WriteLine($"----({menuChoice.ToUpper()})------------------------------------");
+        Console.WriteLine($"-> Which Id would you like to {menuChoice.ToUpper()}?");
         int idInp = UserInput();
 
         // Filter bad options
-        if (idInp < 0 && idInp > currentIdList.Count)
+        if ((idInp == -1) || (idInp <= 0 || idInp > currentIdList.Count))
         {
-            Console.WriteLine("[ERROR]: Invalid option!");
+            Console.Clear();
+            Console.WriteLine("[ERROR]: Invalid option!\n");
             return "ERROR";
         }
         return idDelete = currentIdList[idInp-1];
@@ -112,7 +136,8 @@ class Program
             using (var command = new SqliteCommand(createTableQuery, connection))
             {
                 command.ExecuteNonQuery();
-                Console.WriteLine("-> TABLE EXISTS!\n");
+                Console.Clear();
+                Console.WriteLine("-- [WELCOME TO THE HABIT LOGGER] --\n");
             }
 
             // Begin loop
@@ -120,12 +145,14 @@ class Program
             while(running)
             {
                 Console.WriteLine("1. New Habit\n2. Update Habit\n3. Delete Habit\n4. List Habit\n5. QUIT");
+                Console.Write("\n-> Choose: ");
 
                 // Check for valid input
                 int? opt = UserInput();
                 if (opt < 1 || opt > 5)
                 {
-                    Console.WriteLine("[ERROR]: Invalid input, please try again.");
+                    Console.Clear();
+                    Console.WriteLine("[ERROR]: Invalid input, please try again.\n");
                     continue;
                 }
                 
@@ -139,14 +166,37 @@ class Program
                         // INSERT 
                         // Clear screen first
                         Console.Clear();
+                        // Grab list, don't display
+                        currentHabitsList = ReturnList(connection, false);
                         // User input
-                        Console.WriteLine("------------------------------------------------");
-                        Console.WriteLine("-> Habit Name: ");
+                        Console.WriteLine("----(Insert New Habit)----------------------------");
+                        Console.Write("-> Habit Name: ");
                         string? habitName = Console.ReadLine();
-                        Console.WriteLine("-> Habit Initial Amount: ");
-                        string? habitAmount = Console.ReadLine();
-                        Console.WriteLine("-> Habit Date Started, type 't' for today (yyyy-mm-dd): ");
+                        bool duplicateHabit = false;
+                        // Find duplicate entries -- strict
+                        foreach (string habit in currentHabitsList)
+                        {
+                            if (habit?.ToLower() == habitName?.ToLower())
+                            {
+                                duplicateHabit = true;
+                            }
+                        }
+                        if (duplicateHabit) 
+                        { 
+                            Console.WriteLine("[ERROR]: Habit already exists! Try updating instead.\n");
+                            continue; 
+                        }
+
+                        Console.Write("-> Habit Initial Amount: ");
+                        string? habitAmount = UserInput().ToString(); // Check for valid number input
+                        if (habitAmount == "-1")
+                        {
+                            //Console.WriteLine("[ERROR]: Amount MUST be a number!\n");
+                            continue;
+                        }
+                        Console.Write("-> Habit Date Started, type 't' for today (yyyy-mm-dd): ");
                         string? habitDate = Console.ReadLine();
+                        Console.Clear();
                         if (habitDate?.ToLower() == "t") // if habitDate is null, it won't equal to "t". This clears warnings.
                         {
                             string today = DateTime.Now.ToString("yyyy-MM-dd");
@@ -188,10 +238,13 @@ class Program
                         Console.Clear();
                         // Return existing list, grab ID
                         string idUpdate = ReturnId(connection, "update");
+                        if (idUpdate == "ERROR") { continue; }
 
                         // Input new amount value
                         Console.WriteLine("-> New Amount value:");
-                        string? amountUpdate = Console.ReadLine();
+                        //string? amountUpdate = Console.ReadLine();
+                        string? amountUpdate = UserInput().ToString();
+                        if (amountUpdate == "-1") { continue; }
 
                         // Update amount in table
                         string updateQuery = "UPDATE Habits SET Amount = @amount WHERE Id = @Id";
@@ -200,11 +253,12 @@ class Program
                             updateCommand.Parameters.AddWithValue("@amount", amountUpdate);
                             updateCommand.Parameters.AddWithValue("@Id", idUpdate);
                             int rowsAffected = updateCommand.ExecuteNonQuery();
-                            Console.WriteLine($"\n-> Updated rows: {rowsAffected}");
+                            Console.Clear();
+                            Console.WriteLine($"\n-> Updated rows: {rowsAffected}\n");
                         }
 
                         // Verify update
-                        DisplayList(connection);
+                        ReturnList(connection, true);
                         break;
 
                     case 3:
@@ -221,22 +275,24 @@ class Program
                         {
                             deleteCommand.Parameters.AddWithValue("@Id", idDelete);
                             int rowsDeleted = deleteCommand.ExecuteNonQuery();
-                            Console.WriteLine($"\nDeleted rows: {rowsDeleted}");
+                            Console.Clear();
+                            Console.WriteLine($"\nDeleted rows: {rowsDeleted}\n");
                         }
 
                         // Verify delete
-                        DisplayList(connection);
+                        ReturnList(connection, true);
                         break;
 
                     case 4:
                         // READ 
                         // Clear screen first
                         Console.Clear();
-                        DisplayList(connection);
+                        ReturnList(connection, true);
                         break;
 
-                        // QUIT program 
                     case 5:
+                        // QUIT program 
+                        Console.Clear();
                         return;
                 }
             }
