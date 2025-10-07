@@ -1,17 +1,8 @@
-﻿/* TODO:
-   This is an application where you’ll log occurrences of a habit.
-   [*] This habit can't be tracked by time (ex. hours of sleep), only by quantity (ex. number of water glasses a day)
-   [*] Users need to be able to input the date of the occurrence of the habit
-   [*] The application should store and retrieve data from a real database
-   [*] When the application starts, it should create a sqlite database, if one isn’t present.
-   [*] It should also create a table in the database, where the habit will be logged.
-   [*] The users should be able to insert, delete, update and view their logged habit.
-   [*] You should handle all possible errors so that the application never crashes.
-   [*] You can only interact with the database using ADO.NET. You can’t use mappers such as Entity Framework or Dapper.
-   [*] Follow the DRY Principle, and avoid code repetition.
-   [ ] Your project needs to contain a Read Me file where you'll explain how your app works. 
-   [*] NO DUPLICATE ENTRIES!
-   */
+﻿/*
+ * Author:      Joshua Soran
+ * Created:     Oct. 7, 2025
+ * Description: Basic habit logger that practices ADO.NET and CRUD commands.
+ */
 
 using System;
 using System.IO;
@@ -23,6 +14,7 @@ class Program
     static int UserInput()
     {
         int output;
+        Console.Write(prompt);
         string? inp = Console.ReadLine();
 
         if (!int.TryParse(inp, out output))
@@ -35,7 +27,7 @@ class Program
     }
     
     // display list
-    static List<string> ReturnList(SqliteConnection connection, bool displayList)
+    static List<string> GetHabitList(SqliteConnection connection) 
     {
         // init list for return and row counter
         List<string> currentIdList = new List<string>();
@@ -47,8 +39,6 @@ class Program
         using (var selectCommand = new SqliteCommand(selectQuery, connection))
             using (var reader = selectCommand.ExecuteReader())
             {
-                if (displayList)
-                    Console.WriteLine("----(Current Habits)----------------------------");
                 while (reader.Read())
                 {
                     // track list
@@ -60,36 +50,44 @@ class Program
                     string amount = reader.GetString(2);
                     string date = reader.GetString(3);
 
-                    if (displayList)
-                    {
-                        // Display
-                        Console.WriteLine($"({idTrack}) {name} ({amount}), created at {date}");
-                        // Add to list for return
-                        currentIdList.Add(id.ToString());
-                    }
-                    else  // Don't display & return names not IDs
-                    {   
-                        currentNameList.Add(name.ToString()); 
-                    }
+                    // Display
+                    Console.WriteLine($"({idTrack}) {name} ({amount}), created at {date}");
+
+                    // Add to list for return
+                    currentIdList.Add(id.ToString());
                 }
             }
-        if (displayList)
-        {
-            Console.WriteLine("------------------------------------------------\n");
-            return currentIdList;
-        }
-        else
-        {
-           return currentNameList;
-        } 
+        return currentIdList;
+    }
+
+    static List<string> GetHabitNames(SqliteConnection connection)
+    {
+        List<string> habitNameList = new List<string>();
+
+        // Establish connection and display table from DB
+        string selectQuery = "SELECT Name FROM Habits";
+        using (var selectCommand = new SqliteCommand(selectQuery, connection))
+            using (var reader = selectCommand.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    // variable names
+                    string name = reader.GetString(0);
+
+                    // Add names to list
+                    habitNameList.Add(name.ToString()); 
+                }
+            }
+
+        return habitNameList;
     }
 
     // return ID selection from displayed list
-    static string ReturnId(SqliteConnection connection, string menuChoice)
+    static string SelectHabitId(SqliteConnection connection) 
     {
         string idDelete;
         // Init list to display and receive
-        List<string> currentIdList = ReturnList(connection, true);
+        List<string> currentIdList = GetHabitList(connection);
 
         // Is list empty?
         if (currentIdList.Count == 0)
@@ -98,12 +96,8 @@ class Program
             return "ERROR";
         }
 
-        // Begin prompts
-        Console.WriteLine($"----({menuChoice.ToUpper()})------------------------------------");
-        Console.WriteLine($"-> Which Id would you like to {menuChoice.ToUpper()}?");
-        int idInp = UserInput();
-
         // Filter bad options
+        int idInp = UserInput();
         if ((idInp == -1) || (idInp <= 0 || idInp > currentIdList.Count))
         {
             Console.Clear();
@@ -165,8 +159,8 @@ class Program
                         // INSERT 
                         // Clear screen first
                         Console.Clear();
-                        // Grab list, don't display
-                        currentHabitsList = ReturnList(connection, false);
+                        // Get habit name list
+                        currentHabitsList = GetHabitNames(connection);
                         // User input
                         Console.WriteLine("----(Insert New Habit)----------------------------");
                         Console.Write("-> Habit Name: ");
@@ -235,8 +229,11 @@ class Program
                         // UPDATE 
                         // Clear screen first
                         Console.Clear();
+                        // Begin Prompt
+                        Console.WriteLine($"----(UPDATE)------------------------------------");
+                        Console.WriteLine($"-> Which Id would you like to UPDATE?");
                         // Return existing list, grab ID
-                        string idUpdate = ReturnId(connection, "update");
+                        string idUpdate = SelectHabitId(connection);
                         if (idUpdate == "ERROR") { continue; }
 
                         // Input new amount value
@@ -257,7 +254,9 @@ class Program
                         }
 
                         // Verify update
-                        ReturnList(connection, true);
+                        Console.WriteLine("----(Current Habits)----------------------------"); 
+                        GetHabitList(connection);
+                        Console.WriteLine("------------------------------------------------\n");
                         break;
 
                     case 3:
@@ -265,7 +264,9 @@ class Program
                         // Clear screen first
                         Console.Clear();
                         // Return existing list, grab ID
-                        string idDelete = ReturnId(connection, "delete");
+                        Console.WriteLine($"----(DELETE)------------------------------------");
+                        Console.WriteLine($"-> Which Id would you like to DELETE?");
+                        string idDelete = SelectHabitId(connection);
                         if (idDelete == "ERROR") { continue; }
 
                         // perform delete 
@@ -279,14 +280,17 @@ class Program
                         }
 
                         // Verify delete
-                        ReturnList(connection, true);
+                        Console.WriteLine("----(Current Habits)----------------------------"); 
+                        GetHabitList(connection);
+                        Console.WriteLine("------------------------------------------------\n");
                         break;
 
                     case 4:
                         // READ 
                         // Clear screen first
                         Console.Clear();
-                        ReturnList(connection, true);
+                        GetHabitList(connection);
+                        Console.WriteLine("------------------------------------------------\n");
                         break;
 
                     case 5:
