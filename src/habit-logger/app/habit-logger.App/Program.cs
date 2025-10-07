@@ -8,12 +8,11 @@
    [*] The users should be able to insert, delete, update and view their logged habit.
    [*] You should handle all possible errors so that the application never crashes.
    [*] You can only interact with the database using ADO.NET. You can’t use mappers such as Entity Framework or Dapper.
-   [ ] Follow the DRY Principle, and avoid code repetition.
-   [ ] Your project needs to contain a Read Me file where you'll explain how your app works. Here's a nice example:
-   [ ] NO DUPLICATE ENTRIES!
+   [*] Follow the DRY Principle, and avoid code repetition.
+   [ ] Your project needs to contain a Read Me file where you'll explain how your app works. 
+   [*] NO DUPLICATE ENTRIES!
    */
 
-// Potential BUG --> Careful with datetime input
 using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
