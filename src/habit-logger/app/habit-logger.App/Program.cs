@@ -11,10 +11,10 @@ using Microsoft.Data.Sqlite;
 class Program
 {
     // return either console error or number
+    // Doesn't ever need negative
     static int UserInput()
     {
         int output;
-        Console.Write(prompt);
         string? inp = Console.ReadLine();
 
         if (!int.TryParse(inp, out output))
@@ -22,6 +22,12 @@ class Program
             Console.Clear();
             Console.WriteLine($"[ERROR]: \"{inp}\" is not a number!\n");
             return -1;
+        }
+        if (output < 0) 
+        {
+            Console.Clear();
+            Console.WriteLine($"[ERROR]: No negative numbers allowed!\n");
+            return -1; 
         }
         return output;
     }
@@ -51,7 +57,7 @@ class Program
                     string date = reader.GetString(3);
 
                     // Display
-                    Console.WriteLine($"({idTrack}) {name} ({amount}), created at {date}");
+                    Console.WriteLine($"{idTrack}. {name} ({amount}), created at {date}");
 
                     // Add to list for return
                     currentIdList.Add(id.ToString());
@@ -97,6 +103,7 @@ class Program
         }
 
         // Filter bad options
+        Console.Write("\n-> Option: ");
         int idInp = UserInput();
         if ((idInp == -1) || (idInp <= 0 || idInp > currentIdList.Count))
         {
@@ -231,14 +238,13 @@ class Program
                         Console.Clear();
                         // Begin Prompt
                         Console.WriteLine($"----(UPDATE)------------------------------------");
-                        Console.WriteLine($"-> Which Id would you like to UPDATE?");
                         // Return existing list, grab ID
                         string idUpdate = SelectHabitId(connection);
                         if (idUpdate == "ERROR") { continue; }
 
                         // Input new amount value
-                        Console.WriteLine("-> New Amount value:");
-                        //string? amountUpdate = Console.ReadLine();
+                        Console.Write("-> New Amount value:");
+
                         string? amountUpdate = UserInput().ToString();
                         if (amountUpdate == "-1") { continue; }
 
@@ -265,7 +271,6 @@ class Program
                         Console.Clear();
                         // Return existing list, grab ID
                         Console.WriteLine($"----(DELETE)------------------------------------");
-                        Console.WriteLine($"-> Which Id would you like to DELETE?");
                         string idDelete = SelectHabitId(connection);
                         if (idDelete == "ERROR") { continue; }
 
