@@ -33,13 +33,15 @@ namespace CodingTracker
     {
         public static void Main()
         {
+            // Init Input 
+            var userInp = new UserInput();
+            int optionInp;
+            bool running = true;
+
             // Reset screen on launch
             Console.Clear();
 
-            // Input test
-            var disp = new UserInput();
-            disp.Display();
-            
+
             // Create new db
             using var connection = new SqliteConnection("Data Source=coding-tracker.db");
             connection.Open();
@@ -51,45 +53,73 @@ namespace CodingTracker
                         EndTime TEXT NOT NULL,
                         Duration TEXT NOT NULL
                         );");
-            //int sTime = 120;
-            //int eTime = 30;
-            //int duration = sTime - eTime;
 
-            // Insert data
-            //connection.Execute("INSERT INTO CodingSession (StartTime, EndTime, Duration) VALUES (@StartTime, @EndTime, @Duration);", new { StartTime = sTime, EndTime = eTime, Duration = duration });
+            // Begin LOOP
+            while(running)
+            {
+                // Intro PROMPT
+                Console.WriteLine("1. INSERT\n2. UPDATE\n3. DELETE\n4. DISPLAY\n5. QUIT\n");
+                optionInp = userInp.OptionInput(5); // 5 options
+                if (optionInp == -1) 
+                {
+                    Console.WriteLine("[ERROR]: Invalid option.");
+                    continue;
+                }
 
-            // Delete data by ID
-            //int inputId = 1;
-            //connection.Execute("DELETE FROM CodingSession WHERE Id = @Id", new { Id = inputId});
+                switch(optionInp)
+                {
+                    // Insert data
+                    case 1:
+                        // Time input prompts
+                        Console.WriteLine("Start time (hh:mm)?");
+                        string sTime = userInp.TimeInput();
 
-            // Update data by Id -- should not be allowed to update duration
-            //int inputId = 2;
-            //int sTime = 50;
-            //int eTime = 30;
-            //int duration = sTime - eTime;
-            /*connection.Execute(@"
-                    UPDATE CodingSession
-                    SET StartTime = @StartTime,
-                    EndTime = @EndTime,
-                    Duration = @Duration
-                    WHERE Id = @Id", new 
-                    {
-                    StartTime = sTime,
-                    EndTime = eTime,
-                    Duration = duration,
-                    Id = inputId
-                    });
-            */
+                        Console.WriteLine("End time (hh:mm)? type 'n' for now.");
+                        string eTime = userInp.TimeInput();
 
-            // Query data
-            var CodingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
-
-            foreach (var session in CodingSessions)
-                Console.WriteLine($"{session.Id}: {session.StartTime} {session.EndTime} {session.Duration}");
-
+                        string duration = userInp.ProcessTime(sTime, eTime);
+                        
+                        connection.Execute("INSERT INTO CodingSession (StartTime, EndTime, Duration) VALUES (@StartTime, @EndTime, @Duration);", new { StartTime = sTime, EndTime = eTime, Duration = duration });
+                        break;
+                    // Update
+                    case 2:
+                        int inputId = 1;
+                        sTime = "1";
+                        eTime = "1";
+                        duration = "1";
+                        connection.Execute(@"
+                                UPDATE CodingSession
+                                SET StartTime = @StartTime,
+                                EndTime = @EndTime,
+                                Duration = @Duration
+                                WHERE Id = @Id", new 
+                                {
+                                StartTime = sTime,
+                                EndTime = eTime,
+                                Duration = duration,
+                                Id = inputId
+                                });
+                        break;
+                    // Delete
+                    case 3:
+                        inputId = 1;
+                        connection.Execute("DELETE FROM CodingSession WHERE Id = @Id", new { Id = inputId});
+                        break;
+                    // Display
+                    case 4:
+                        var CodingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        foreach (var session in CodingSessions)
+                        {
+                            Console.WriteLine($"{session.Id}: {session.StartTime} {session.EndTime} {session.Duration}");
+                        }
+                        break;
+                    // Quit
+                    case 5:
+                        running = false;
+                        break;
+                }
+            }
             connection.Close();
-
-
         }
     }
 }
