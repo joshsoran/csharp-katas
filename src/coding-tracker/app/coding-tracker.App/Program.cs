@@ -5,7 +5,6 @@
  */
 
 /* 
- * TODO:
  [ ] - This application has the same requirements as the previous project, except that now you'll be logging your daily coding time.
  [ ] - To show the data on the console, you should use the "Spectre.Console" library.
  [ ] - You're required to have separate classes in different files (ex. UserInput.cs, Validation.cs, CodingController.cs)
@@ -54,6 +53,10 @@ namespace CodingTracker
                         Duration TEXT NOT NULL
                         );");
 
+            string sTime;
+            string eTime;
+            string duration;
+
             // Begin LOOP
             while(running)
             {
@@ -70,23 +73,60 @@ namespace CodingTracker
                 {
                     // Insert data
                     case 1:
+                        // HACK: The way I'm intaking and calculating time can be done in one function...
+                        // Doesn't follow DRY principles.
+                         
                         // Time input prompts
-                        Console.WriteLine("Start time (hh:mm)?");
-                        string sTime = userInp.TimeInput();
+                        Console.WriteLine("Start time (hh:mm):");
+                        sTime = userInp.TimeInput(true);
+                        if (sTime == "ERROR")
+                        {
+                            Console.WriteLine("[ERROR]: Could not process inputted time.");
+                            continue;
+                        }
 
-                        Console.WriteLine("End time (hh:mm)? type 'n' for now.");
-                        string eTime = userInp.TimeInput();
+                        Console.WriteLine("End time (hh:mm), type 'n' for now.");
+                        eTime = userInp.TimeInput(false);
+                        if (eTime == "ERROR")
+                        {
+                            Console.WriteLine("[ERROR]: Could not process inputted time.");
+                            continue;
+                        }
 
-                        string duration = userInp.ProcessTime(sTime, eTime);
+                        duration = userInp.ProcessTime(sTime, eTime);
                         
                         connection.Execute("INSERT INTO CodingSession (StartTime, EndTime, Duration) VALUES (@StartTime, @EndTime, @Duration);", new { StartTime = sTime, EndTime = eTime, Duration = duration });
                         break;
                     // Update
                     case 2:
-                        int inputId = 1;
-                        sTime = "1";
-                        eTime = "1";
-                        duration = "1";
+                        var codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        Console.WriteLine("Choose which ID to update:");
+                        int idChoice = userInp.SelectId(codingSessions);
+                        int inputId = codingSessions.ElementAt(idChoice).Id;
+
+                        // HACK: The way I'm intaking and calculating time can be done in one function...
+                        // Doesn't follow DRY principles.
+
+                        // New sTime
+                        Console.WriteLine("NEW Start Time (hh:mm): "); 
+                        sTime = userInp.TimeInput(true);
+                        if (sTime == "ERROR")
+                        {
+                            Console.WriteLine("[ERROR]: Could not process inputted time.");
+                            continue;
+                        }
+
+                        // New eTime
+                        Console.WriteLine("NEW End Time (hh:mm), type 'n' for now: "); 
+                        eTime = userInp.TimeInput(false);
+                        if (eTime == "ERROR")
+                        {
+                            Console.WriteLine("[ERROR]: Could not process inputted time.");
+                            continue;
+                        }
+
+                        duration = userInp.ProcessTime(sTime, eTime);
+
                         connection.Execute(@"
                                 UPDATE CodingSession
                                 SET StartTime = @StartTime,
@@ -102,16 +142,14 @@ namespace CodingTracker
                         break;
                     // Delete
                     case 3:
+                        // TODO: Get this functionality working
                         inputId = 1;
                         connection.Execute("DELETE FROM CodingSession WHERE Id = @Id", new { Id = inputId});
                         break;
                     // Display
                     case 4:
-                        var CodingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
-                        foreach (var session in CodingSessions)
-                        {
-                            Console.WriteLine($"{session.Id}: {session.StartTime} {session.EndTime} {session.Duration}");
-                        }
+                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        userInp.DisplayList(codingSessions);
                         break;
                     // Quit
                     case 5:

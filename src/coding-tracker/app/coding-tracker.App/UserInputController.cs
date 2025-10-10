@@ -1,4 +1,5 @@
 // Tell user specific format to use for date and time -- prevent other formats
+using CodingTracker.Sessions;
 
 namespace CodingTracker.Input 
 {
@@ -21,10 +22,10 @@ namespace CodingTracker.Input
             return opt;
         }
 
-        public string TimeInput()
+        public string TimeInput(bool firstTimeInput)
         {
             string? inp = Console.ReadLine();
-            if (inp?.ToLower() == "n")
+            if (inp?.ToLower() == "n" && firstTimeInput == false)
             {
                 return TimeOnly.FromDateTime(DateTime.Now).ToString(); 
             }
@@ -42,6 +43,34 @@ namespace CodingTracker.Input
             
             TimeSpan timeSpan = time2 - time1;
             return timeSpan.ToString();
+        }
+
+        public void DisplayList(IEnumerable<CodingSession> codingSession)
+        {
+            int count = 0;
+            // Display list
+            foreach (var session in codingSession)
+            {
+                count++;
+                Console.WriteLine($"{count}: {session.StartTime} {session.EndTime} {session.Duration}");
+            }
+        }
+
+        public int SelectId(IEnumerable<CodingSession> codingSession)
+        {
+            // Display list for user to choose option from
+            DisplayList(codingSession);
+
+            // break
+            Console.WriteLine();
+
+            // user input
+            int opt = OptionInput(codingSession.Count());
+
+            // converting user input into index to find correct element
+            opt = opt - 1;
+
+            return opt;
         }
     }
 }
