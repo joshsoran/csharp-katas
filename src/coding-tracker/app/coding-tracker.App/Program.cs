@@ -21,6 +21,7 @@ using System;
 using System.Data;
 using Microsoft.Data.Sqlite;
 using Dapper;
+using Spectre.Console;
 
 // CodingTracker Library
 using CodingTracker.Sessions;
@@ -76,6 +77,12 @@ namespace CodingTracker
                         // HACK: The way I'm intaking and calculating time can be done in one function...
                         // Doesn't follow DRY principles.
                          
+                        // Intro prompt
+                        Console.Clear();
+                        var rule = new Spectre.Console.Rule("[yellow]Insert[/]");
+                        rule.Justification = Spectre.Console.Justify.Left;
+                        AnsiConsole.Write(rule);
+
                         // Time input prompts
                         Console.WriteLine("Start time (hh:mm):");
                         sTime = userInp.TimeInput(true);
