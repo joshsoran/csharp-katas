@@ -48,7 +48,6 @@ namespace CodingTracker.Input
         public void DisplayList(IEnumerable<CodingSession> codingSession)
         {
             int count = 0;
-            // Display list
             foreach (var session in codingSession)
             {
                 count++;
@@ -58,13 +57,6 @@ namespace CodingTracker.Input
 
         public int SelectId(IEnumerable<CodingSession> codingSession)
         {
-            // Display list for user to choose option from
-            DisplayList(codingSession);
-
-            // break
-            Console.WriteLine();
-
-            // user input
             int opt = OptionInput(codingSession.Count());
 
             // converting user input into index to find correct element

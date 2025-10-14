@@ -23,15 +23,33 @@ namespace CodingTracker
 {   
     public static class Program 
     {
+        public static bool ErrorCheck(string strErr, int intErr)
+        {
+            if (strErr == "ERROR" || intErr == -1)
+            {
+                Console.WriteLine("[ERROR]: Invalid input!");
+                return true;
+            }
+            return false; // Returns no errors;
+        }
         public static void Main()
         {
 
             // Init Input 
             var userInp = new UserInput();
-            int optionInp;
+
             bool running = true;
 
-            // Reset screen on launch
+            string sTime;
+            string eTime;
+            string duration;
+
+            int optionInp;
+            int idChoice;
+            int inputId;
+
+
+            // clear screen on launch
             Console.Clear();
 
             // Build DB config
@@ -42,10 +60,7 @@ namespace CodingTracker
 
             // Retrieve connection string
             var connectionString = config.GetConnectionString("Default");
-            Console.WriteLine($"Using DB connection: {connectionString}");
-
             using var connection = new SqliteConnection(connectionString);
-
             connection.Open();
 
             // Create table
@@ -56,9 +71,9 @@ namespace CodingTracker
                         Duration TEXT NOT NULL
                         );");
 
-            string sTime;
-            string eTime;
-            string duration;
+           
+            // grab list before options are displayed
+            var codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
 
             // Begin LOOP
             while(running)
@@ -66,76 +81,59 @@ namespace CodingTracker
                 // Intro PROMPT
                 Console.WriteLine("1. INSERT\n2. UPDATE\n3. DELETE\n4. DISPLAY\n5. QUIT\n");
                 optionInp = userInp.OptionInput(5); // 5 options
-                if (optionInp == -1) 
-                {
-                    Console.WriteLine("[ERROR]: Invalid option.");
-                    continue;
-                }
-
+                if (ErrorCheck("", optionInp)){ continue; }
                 switch(optionInp)
                 {
                     // Insert data
                     case 1:
-                        // HACK: The way I'm intaking and calculating time can be done in one function...
-                        // Doesn't follow DRY principles.
-                         
                         // Intro prompt
                         Console.Clear();
                         var rule = new Spectre.Console.Rule("[yellow]Insert[/]");
                         rule.Justification = Spectre.Console.Justify.Left;
                         AnsiConsole.Write(rule);
 
-                        // Time input prompts
+                        // Start Time input prompts
                         Console.WriteLine("Start time (hh:mm):");
                         sTime = userInp.TimeInput(true);
-                        if (sTime == "ERROR")
-                        {
-                            Console.WriteLine("[ERROR]: Could not process inputted time.");
-                            continue;
-                        }
+                        if (ErrorCheck(sTime, 0)) { continue; }
 
+                        // End time input prompt
                         Console.WriteLine("End time (hh:mm), type 'n' for now.");
                         eTime = userInp.TimeInput(false);
-                        if (eTime == "ERROR")
-                        {
-                            Console.WriteLine("[ERROR]: Could not process inputted time.");
-                            continue;
-                        }
+                        if (ErrorCheck(eTime, 0)) { continue; }
 
+                        // Duration
                         duration = userInp.CalculateDuration(sTime, eTime);
                         
+                        // execute insert query
                         connection.Execute("INSERT INTO CodingSession (StartTime, EndTime, Duration) VALUES (@StartTime, @EndTime, @Duration);", new { StartTime = sTime, EndTime = eTime, Duration = duration });
+
+                        Console.WriteLine();
                         break;
                     // Update
                     case 2:
-                        var codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
-                        Console.WriteLine("Choose which ID to update:");
-                        int idChoice = userInp.SelectId(codingSessions);
-                        int inputId = codingSessions.ElementAt(idChoice).Id;
+                        // Intro prompt
+                        Console.Clear();
+                        userInp.DisplayList(codingSessions);                        
+                        Console.Write("\nChoose which ID to update: ");
+                        idChoice = userInp.SelectId(codingSessions);
+                        inputId = codingSessions.ElementAt(idChoice).Id;
 
-                        // HACK: The way I'm intaking and calculating time can be done in one function...
-                        // Doesn't follow DRY principles.
 
                         // New sTime
                         Console.WriteLine("NEW Start Time (hh:mm): "); 
                         sTime = userInp.TimeInput(true);
-                        if (sTime == "ERROR")
-                        {
-                            Console.WriteLine("[ERROR]: Could not process inputted time.");
-                            continue;
-                        }
+                        if (ErrorCheck(sTime, 0)) { continue; }
 
                         // New eTime
                         Console.WriteLine("NEW End Time (hh:mm), type 'n' for now: "); 
                         eTime = userInp.TimeInput(false);
-                        if (eTime == "ERROR")
-                        {
-                            Console.WriteLine("[ERROR]: Could not process inputted time.");
-                            continue;
-                        }
+                        if (ErrorCheck(eTime, 0)) { continue; }
 
+                        // final new duration
                         duration = userInp.CalculateDuration(sTime, eTime);
 
+                        // execute update query
                         connection.Execute(@"
                                 UPDATE CodingSession
                                 SET StartTime = @StartTime,
@@ -148,22 +146,40 @@ namespace CodingTracker
                                 Duration = duration,
                                 Id = inputId
                                 });
+
+                        Console.Clear();
+                        Console.WriteLine("-> New List:");
+                        userInp.DisplayList(codingSessions);
+
+                        Console.WriteLine();
                         break;
                     // Delete
                     case 3:
-                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        // Intro prompt
+                        Console.Clear();
+                        userInp.DisplayList(codingSessions);                        
+                        Console.Write("\nChoose which ID to delete: ");
                         idChoice = userInp.SelectId(codingSessions);
                         inputId = codingSessions.ElementAt(idChoice).Id;
 
+                        // execute delete query
                         connection.Execute("DELETE FROM CodingSession WHERE Id = @Id", new { Id = inputId});
 
+                        // refresh codingSessions list and re-display results
                         codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+
+                        Console.Clear();
+                        Console.WriteLine("-> New List:");
                         userInp.DisplayList(codingSessions);
+
+                        Console.WriteLine();
                         break;
                     // Display
                     case 4:
-                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        // Clear screen
+                        Console.Clear();
                         userInp.DisplayList(codingSessions);
+                        Console.WriteLine();
                         break;
                     // Quit
                     case 5:
