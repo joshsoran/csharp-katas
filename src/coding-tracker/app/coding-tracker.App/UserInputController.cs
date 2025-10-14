@@ -1,5 +1,6 @@
 // Tell user specific format to use for date and time -- prevent other formats
 using CodingTracker.Sessions;
+using Spectre.Console;
 
 namespace CodingTracker.Input 
 {
@@ -47,12 +48,35 @@ namespace CodingTracker.Input
 
         public void DisplayList(IEnumerable<CodingSession> codingSession)
         {
+            
+
+            var table = new Table();
+
+            // Define your columns
+            table.AddColumn("ID");
+            table.AddColumn("Start Time");
+            table.AddColumn("End Time");
+            table.AddColumn("Duration");
+
+            // Optional: Add some styling
+            table.Border = TableBorder.Rounded;
+            table.Title = new TableTitle("Coding Sessions");
+
+            // Add each row
             int count = 0;
             foreach (var session in codingSession)
             {
                 count++;
-                Console.WriteLine($"{count}: {session.StartTime} {session.EndTime} {session.Duration}");
+                table.AddRow(
+                        count.ToString(),
+                        session.StartTime.ToString(),
+                        session.EndTime.ToString(),
+                        session.Duration.ToString()
+                        );
             }
+
+            // Print it to the console
+            AnsiConsole.Write(table);
         }
 
         public int SelectId(IEnumerable<CodingSession> codingSession)

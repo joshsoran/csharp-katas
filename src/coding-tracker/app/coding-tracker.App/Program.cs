@@ -32,6 +32,7 @@ namespace CodingTracker
             }
             return false; // Returns no errors;
         }
+
         public static void Main()
         {
 
@@ -78,10 +79,38 @@ namespace CodingTracker
             // Begin LOOP
             while(running)
             {
-                // Intro PROMPT
-                Console.WriteLine("1. INSERT\n2. UPDATE\n3. DELETE\n4. DISPLAY\n5. QUIT\n");
+                // Your list of options
+                var options = new List<string>
+                {
+                    "1. INSERT",
+                    "2. UPDATE",
+                    "3. DELETE",
+                    "4. DISPLAY LIST",
+                    "5. QUIT"
+                };
+
+                // Create a markup string for the options list
+                var listMarkup = string.Join("\n", options);
+
+                // Wrap that in a Spectre.Console 'Markup' object
+                var listText = new Markup(listMarkup);
+
+                // Wrap it in a panel
+                var panel = new Panel(listText)
+                {
+                    Header = new PanelHeader("Main Menu"),
+                    Border = BoxBorder.Rounded,
+                    Padding = new Padding(2, 1),
+                };
+
+                // Render to console
+                AnsiConsole.Write(panel);
+
+                //Console.WriteLine("1. INSERT\n2. UPDATE\n3. DELETE\n4. DISPLAY\n5. QUIT\n");
                 optionInp = userInp.OptionInput(5); // 5 options
                 if (ErrorCheck("", optionInp)){ continue; }
+
+
                 switch(optionInp)
                 {
                     // Insert data
@@ -121,12 +150,12 @@ namespace CodingTracker
 
 
                         // New sTime
-                        Console.WriteLine("NEW Start Time (hh:mm): "); 
+                        Console.Write("NEW Start Time (hh:mm): "); 
                         sTime = userInp.TimeInput(true);
                         if (ErrorCheck(sTime, 0)) { continue; }
 
                         // New eTime
-                        Console.WriteLine("NEW End Time (hh:mm), type 'n' for now: "); 
+                        Console.Write("NEW End Time (hh:mm), type 'n' for now: "); 
                         eTime = userInp.TimeInput(false);
                         if (ErrorCheck(eTime, 0)) { continue; }
 
@@ -148,7 +177,6 @@ namespace CodingTracker
                                 });
 
                         Console.Clear();
-                        Console.WriteLine("-> New List:");
                         userInp.DisplayList(codingSessions);
 
                         Console.WriteLine();
@@ -165,11 +193,7 @@ namespace CodingTracker
                         // execute delete query
                         connection.Execute("DELETE FROM CodingSession WHERE Id = @Id", new { Id = inputId});
 
-                        // refresh codingSessions list and re-display results
-                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
-
                         Console.Clear();
-                        Console.WriteLine("-> New List:");
                         userInp.DisplayList(codingSessions);
 
                         Console.WriteLine();
@@ -178,6 +202,8 @@ namespace CodingTracker
                     case 4:
                         // Clear screen
                         Console.Clear();
+                        // refresh codingSessions list and re-display results
+                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
                         userInp.DisplayList(codingSessions);
                         Console.WriteLine();
                         break;
