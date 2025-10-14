@@ -36,7 +36,7 @@ namespace CodingTracker.Input
             return time.ToString();
         }
 
-        public string ProcessTime(string t1, string t2)
+        public string CalculateDuration(string t1, string t2)
         {
             if (!TimeOnly.TryParse(t1, out TimeOnly time1)) { return "ERROR"; }
             if (!TimeOnly.TryParse(t2, out TimeOnly time2)) { return "ERROR"; }
