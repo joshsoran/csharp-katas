@@ -149,9 +149,14 @@ namespace CodingTracker
                         break;
                     // Delete
                     case 3:
-                        // TODO: Get this functionality working
-                        inputId = 1;
+                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        idChoice = userInp.SelectId(codingSessions);
+                        inputId = codingSessions.ElementAt(idChoice).Id;
+
                         connection.Execute("DELETE FROM CodingSession WHERE Id = @Id", new { Id = inputId});
+
+                        codingSessions = connection.Query<CodingSession>("SELECT * FROM CodingSession;");
+                        userInp.DisplayList(codingSessions);
                         break;
                     // Display
                     case 4:
