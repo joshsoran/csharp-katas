@@ -142,30 +142,68 @@ namespace CodingTracker
                         break;
                     // Update
                     case 2:
-                       
+                        // Create the live display
+                        AnsiConsole.Live(new Markup("Starting...\n"))
+                            .Start(ctx =>
+                                    {
+                                    // Step 1: Ask for ID
+                                    ctx.UpdateTarget(new Markup("[yellow]Choose which ID to update:[/]"));
+                                    var id = userInp.SelectId(codingSessions);
+
+                                    // Step 2: Ask for new start time
+                                    ctx.UpdateTarget(new Markup($"[green]Selected ID:[/] {id}\n[yellow]Enter new start time:[/]"));
+                                    var sTime = userInp.TimeInput(true);
+
+                                    // Step 3: Ask for new end time
+                                    ctx.UpdateTarget(new Markup($"[green]New Start:[/] {newStart}\n[yellow]Enter new end time:[/]"));
+                                    var eTime = userInp.TimeInput(false);
+
+                                    // Step 4: Confirmation
+                                    ctx.UpdateTarget(new Markup(
+                                                $"[green]Updated ID:[/] {id}\n" +
+                                                $"[green]Start:[/] {newStart}\n" +
+                                                $"[green]End:[/] {newEnd}\n" +
+                                                $"[bold cyan]✔ Update Complete![/]"
+                                                ));
+                                    });
                         // Intro prompt
-                        Console.Clear();
-                        rule = new Spectre.Console.Rule("[blue]Update[/]");
-                        rule.Justification = Spectre.Console.Justify.Left;
-                        AnsiConsole.Write(rule);
+                        // Console.Clear();
+                        //rule = new Spectre.Console.Rule("[blue]Update[/]");
+                        //rule.Justification = Spectre.Console.Justify.Left;
+                        //AnsiConsole.Write(rule);
 
-                        userInp.DisplayList(codingSessions);                        
-                        Console.Write("\nChoose which ID to update: ");
-                        idChoice = userInp.SelectId(codingSessions);
-                        inputId = codingSessions.ElementAt(idChoice).Id;
+                        //userInp.DisplayList(codingSessions);                        
+                        //Console.Write("\nChoose which ID to update: ");
+                        //idChoice = userInp.SelectId(codingSessions);
+                        //inputId = codingSessions.ElementAt(idChoice).Id;
 
 
-                        // New sTime
-                        Console.Write("NEW Start Time (hh:mm): "); 
-                        sTime = userInp.TimeInput(true);
-                        if (ErrorCheck(sTime, 0)) { continue; }
+                        //// New sTime
+                        //Console.Write("NEW Start Time (hh:mm): "); 
+                        //sTime = userInp.TimeInput(true);
+                        //if (ErrorCheck(sTime, 0)) { continue; }
 
-                        // New eTime
-                        Console.Write("NEW End Time (hh:mm), type 'n' for now: "); 
-                        eTime = userInp.TimeInput(false);
-                        if (ErrorCheck(eTime, 0)) { continue; }
+                        //// New eTime
+                        //Console.Write("NEW End Time (hh:mm), type 'n' for now: "); 
+                        //eTime = userInp.TimeInput(false);
+                        //if (ErrorCheck(eTime, 0)) { continue; }
 
-                        
+                        // final new duration
+                        duration = userInp.CalculateDuration(sTime, eTime);
+
+                        // execute update query
+                        connection.Execute(@"
+                                UPDATE CodingSession
+                                SET StartTime = @StartTime,
+                                EndTime = @EndTime,
+                                Duration = @Duration
+                                WHERE Id = @Id", new 
+                                {
+                                StartTime = sTime,
+                                EndTime = eTime,
+                                Duration = duration,
+                                Id = inputId
+                                });
 
                         Console.Clear();
 
